@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"main/keys"
@@ -97,5 +98,11 @@ func generate(n int) {
 }
 
 func main() {
-	generate(4)
+	N, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	generate(N)
 }
