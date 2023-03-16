@@ -25,7 +25,7 @@ func getOutputDir() string {
 	return filepath.Join(path, "temp")
 }
 
-func generate(n int) {
+func generate(n int) string {
 	var f int = F(n)
 
 	suite := bn256.NewSuite()
@@ -95,6 +95,8 @@ func generate(n int) {
 	if err != nil {
 		log.Println(err)
 	}
+
+	return outputDir
 }
 
 func main() {
