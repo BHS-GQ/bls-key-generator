@@ -33,8 +33,6 @@ func generate(n int) string {
 	priPoly := share.NewPriPoly(suite.G2(), f+1, secret, suite.RandomStream()) // Private key
 	pubPoly := priPoly.Commit(suite.G2().Point().Base())                       // Common public key
 
-	PubShares := make([]keys.PubShare, n)
-
 	currentTime := time.Now().Format("2006-01-02_15:04:05")
 	keyDir := fmt.Sprintf("%d_%s", n, currentTime)
 	outputDir := filepath.Join(
@@ -49,9 +47,9 @@ func generate(n int) string {
 		if err != nil {
 			log.Println(err)
 		}
-		ps := keys.PriShare{Index: x.I, Pri: privateByte}
+		pris := keys.PriShare{Index: x.I, Pri: privateByte}
 
-		priBytes, err := json.Marshal(ps)
+		priBytes, err := json.Marshal(pris)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -73,27 +71,32 @@ func generate(n int) string {
 	}
 
 	// Public Key
-	for i, x := range pubPoly.Shares(n) {
+	for idx, x := range pubPoly.Shares(n) {
 		pubByte, err := x.V.MarshalBinary()
 		if err != nil {
 			log.Println(err)
 		}
-		pB := keys.PubShare{Index: x.I, Pub: pubByte}
-		PubShares[i] = pB
-	}
+		pubs := keys.PubShare{Index: x.I, Pub: pubByte}
 
-	pubBytes, err := json.Marshal(PubShares)
-	if err != nil {
-		log.Println(err)
-	}
+		pubBytes, err := json.Marshal(pubs)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	pubKeyFile := filepath.Join(
-		outputDir,
-		"blsPubKey.json",
-	)
-	err = ioutil.WriteFile(pubKeyFile, pubBytes, 0644)
-	if err != nil {
-		log.Println(err)
+		pubKeyFile := filepath.Join(
+			outputDir,
+			fmt.Sprintf("blsPubKey%d.json", idx),
+		)
+
+		// Write json array to file.
+		_, err = os.Create(pubKeyFile)
+		if err != nil {
+			log.Println(err)
+		}
+		err = ioutil.WriteFile(pubKeyFile, pubBytes, 0644)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	return outputDir
