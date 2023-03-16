@@ -26,12 +26,12 @@ func getOutputDir() string {
 }
 
 func generate(n int) string {
-	var f int = F(n)
+	var q int = Q(n)
 
 	suite := bn256.NewSuite()
 	secret := suite.G1().Scalar().Pick(suite.RandomStream())
-	priPoly := share.NewPriPoly(suite.G2(), f+1, secret, suite.RandomStream()) // Private key
-	pubPoly := priPoly.Commit(suite.G2().Point().Base())                       // Common public key
+	priPoly := share.NewPriPoly(suite.G2(), q, secret, suite.RandomStream()) // Private key
+	pubPoly := priPoly.Commit(suite.G2().Point().Base())                     // Common public key
 
 	currentTime := time.Now().Format("2006-01-02_15:04:05")
 	keyDir := fmt.Sprintf("%d_%s", n, currentTime)

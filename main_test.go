@@ -9,12 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/share"
-	"go.dedis.ch/kyber/v3/sign"
-	"go.dedis.ch/kyber/v3/sign/bdn"
 	"go.dedis.ch/kyber/v3/sign/bls"
+	"go.dedis.ch/kyber/v3/sign/tbls"
 )
 
 // Decode public shares from pub-key.conf file...
@@ -75,6 +73,8 @@ func decodePriShares(suite *bn256.Suite, outputDir string, n int) []*share.PriSh
 func TestBLSKeyGen(t *testing.T) {
 	n := 5
 	q := Q(n)
+	signers := q - 1
+
 	outputDir := generate(n)
 
 	suite := bn256.NewSuite()
@@ -85,9 +85,9 @@ func TestBLSKeyGen(t *testing.T) {
 	msg := []byte("Hello threshold Boneh-Lynn-Shacham")
 	sigsToLeader := make([][]byte, 0)
 	pkToLeader := make([]*share.PubShare, 0)
-	for ridx := 0; ridx < q; ridx++ {
-		sig, err := bdn.Sign(
-			suite, priShares[ridx].V, msg,
+	for ridx := 0; ridx < signers; ridx++ {
+		sig, err := tbls.Sign(
+			suite, priShares[ridx], msg,
 		)
 		if err != nil {
 			log.Fatal("tbls sign", err)
@@ -98,37 +98,16 @@ func TestBLSKeyGen(t *testing.T) {
 	}
 
 	// Verifying
-	pkPoints := make([]kyber.Point, 0)
-	for _, pk := range pkToLeader {
-		pkPoints = append(pkPoints, pk.V)
-	}
-	mask, _ := sign.NewMask(suite, pkPoints, nil)
-	for i := 0; i < q; i++ {
-		mask.SetBit(i, true)
+	pubKey, err := share.RecoverPubPoly(suite.G2(), pkToLeader, q, n)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	aggSig, err := bdn.AggregateSignatures(suite, sigsToLeader, mask)
+	aggSig, err := tbls.Recover(suite, pubKey, msg, sigsToLeader, q, n)
 	if err != nil {
 		t.Error(err)
 	}
-
-	aggPKey, err := bdn.AggregatePublicKeys(suite, mask)
-	if err != nil {
-		t.Error(err)
-	}
-
-	sig, err := aggSig.MarshalBinary()
-	if err != nil {
-		t.Error(err)
-	}
-
-	err = bdn.Verify(suite, aggPKey, msg, sig)
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Test individual point
-	err = bls.Verify(suite, pkPoints[1], msg, sigsToLeader[1])
+	err = bls.Verify(suite, pubKey.Commit(), msg, aggSig)
 	if err != nil {
 		t.Error(err)
 	}
