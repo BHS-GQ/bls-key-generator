@@ -1,11 +1,9 @@
 package blsgen
 
-import "math"
-
 func F(n int) int {
-	return int(math.Ceil(float64(n)/3)) - 1
+	return (n - 1) / 3
 }
 
 func Q(n int) int {
-	return F(n)*2 + 1
+	return n - F(n)
 }
