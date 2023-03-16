@@ -9,10 +9,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/share"
+	"go.dedis.ch/kyber/v3/sign"
+	"go.dedis.ch/kyber/v3/sign/bdn"
 	"go.dedis.ch/kyber/v3/sign/bls"
-	"go.dedis.ch/kyber/v3/sign/tbls"
 )
 
 // Decode public shares from pub-key.conf file...
@@ -84,8 +86,8 @@ func TestBLSKeyGen(t *testing.T) {
 	sigsToLeader := make([][]byte, 0)
 	pkToLeader := make([]*share.PubShare, 0)
 	for ridx := 0; ridx < q; ridx++ {
-		sig, err := tbls.Sign(
-			suite, priShares[ridx], msg,
+		sig, err := bdn.Sign(
+			suite, priShares[ridx].V, msg,
 		)
 		if err != nil {
 			log.Fatal("tbls sign", err)
@@ -96,17 +98,38 @@ func TestBLSKeyGen(t *testing.T) {
 	}
 
 	// Verifying
-	pubKey, err := share.RecoverPubPoly(suite.G2(), pkToLeader, q, n)
-	if err != nil {
-		log.Fatal(err)
+	pkPoints := make([]kyber.Point, 0)
+	for _, pk := range pkToLeader {
+		pkPoints = append(pkPoints, pk.V)
+	}
+	mask, _ := sign.NewMask(suite, pkPoints, nil)
+	for i := 0; i < q; i++ {
+		mask.SetBit(i, true)
 	}
 
-	aggSig, err := tbls.Recover(suite, pubKey, msg, sigsToLeader, q, n)
+	aggSig, err := bdn.AggregateSignatures(suite, sigsToLeader, mask)
 	if err != nil {
-		t.Error("Failed to recover Aggregated Signature", err)
+		t.Error(err)
 	}
-	err = bls.Verify(suite, pubKey.Commit(), msg, aggSig)
+
+	aggPKey, err := bdn.AggregatePublicKeys(suite, mask)
 	if err != nil {
-		t.Error("Failed to Verify", err)
+		t.Error(err)
+	}
+
+	sig, err := aggSig.MarshalBinary()
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = bdn.Verify(suite, aggPKey, msg, sig)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Test individual point
+	err = bls.Verify(suite, pkPoints[1], msg, sigsToLeader[1])
+	if err != nil {
+		t.Error(err)
 	}
 }
