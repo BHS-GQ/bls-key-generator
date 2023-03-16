@@ -71,9 +71,11 @@ func decodePriShares(suite *bn256.Suite, outputDir string, n int) []*share.PriSh
 }
 
 func TestBLSKeyGen(t *testing.T) {
-	n := 5
+	n := 16
 	q := Q(n)
-	signers := q - 1
+	signers := q
+
+	t.Logf("n=%d, signers=%d\n", n, signers)
 
 	outputDir := generate(n)
 
@@ -86,15 +88,21 @@ func TestBLSKeyGen(t *testing.T) {
 	sigsToLeader := make([][]byte, 0)
 	pkToLeader := make([]*share.PubShare, 0)
 	for ridx := 0; ridx < signers; ridx++ {
+		pk, sk := pubShares[ridx], priShares[ridx]
+
 		sig, err := tbls.Sign(
-			suite, priShares[ridx], msg,
+			suite, sk, msg,
 		)
 		if err != nil {
 			log.Fatal("tbls sign", err)
 		}
 
+		if ridx == signers-1 {
+			t.Logf("siglen=%d, pklen=%d, sklen=%d\n", len(sig), len(pk.V.String()), len(sk.V.String()))
+		}
+
 		sigsToLeader = append(sigsToLeader, sig)
-		pkToLeader = append(pkToLeader, pubShares[ridx])
+		pkToLeader = append(pkToLeader, pk)
 	}
 
 	// Verifying
