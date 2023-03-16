@@ -1,4 +1,4 @@
-package main
+package blsgen
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"main/keys"
+	"blsgen/keys"
 
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/share"
@@ -56,7 +56,7 @@ func generate(n int) string {
 
 		privKeyFile := filepath.Join(
 			outputDir,
-			fmt.Sprintf("blsPrivKey%d.json", idx),
+			fmt.Sprintf("blsPriKey%d.json", idx),
 		)
 
 		// Write json array to file.

@@ -1,89 +1,112 @@
-package main
+package blsgen
 
 import (
+	"blsgen/keys"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
-	"main/keys"
 	"path/filepath"
-	"strconv"
 	"testing"
 
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/share"
+	"go.dedis.ch/kyber/v3/sign/bls"
+	"go.dedis.ch/kyber/v3/sign/tbls"
 )
 
 // Decode public shares from pub-key.conf file...
-func DecodePubKey(suite *bn256.Suite, outputDir string, n int) *share.PubPoly {
-	var err error
-
-	pubKeyFile := filepath.Join(outputDir, "blsPubKey.json")
-	pubKeyBytes, err := ioutil.ReadFile(pubKeyFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var data []keys.PubShare
-	err = json.Unmarshal(pubKeyBytes, &data)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func decodePubShares(suite *bn256.Suite, outputDir string, n int) []*share.PubShare {
 	dePubShares := make([]*share.PubShare, n)
-	for i, d := range data {
-		point := suite.G2().Point()
-		dePubShares[i] = &share.PubShare{}
-		dePubShares[i].I = d.Index
-		err = point.UnmarshalBinary(d.Pub)
+	for idx := 0; idx < n; idx++ {
+		pubKeyFile := filepath.Join(outputDir, fmt.Sprintf("blsPubKey%d.json", idx))
+		pubKeyBytes, err := ioutil.ReadFile(pubKeyFile)
 		if err != nil {
 			log.Fatal(err)
 		}
-		dePubShares[i].V = point
+		var data keys.PubShare
+		err = json.Unmarshal(pubKeyBytes, &data)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		point := suite.G2().Point()
+		dePubShares[idx] = &share.PubShare{}
+		dePubShares[idx].I = data.Index
+		err = point.UnmarshalBinary(data.Pub)
+		if err != nil {
+			log.Fatal(err)
+		}
+		dePubShares[idx].V = point
 	}
 
-	// Recover public key
-	t := Q(n)
-	pubKey, err := share.RecoverPubPoly(suite.G2(), dePubShares, t, n)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return pubKey
+	return dePubShares
 }
 
-func DecodePubShare(suite *bn256.Suite, n, t int) *share.PubPoly {
-	// Read public keys from file.
-	plan, _ := ioutil.ReadFile("/home/derick/eth1/keygen/temp/" + strconv.Itoa(n) + "/public_key.conf")
-	var data []keys.PubShare
-	err := json.Unmarshal(plan, &data)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	dePubShares := make([]*share.PubShare, n)
-
-	for i, d := range data {
-		point := suite.G2().Point()
-		var err error
-		dePubShares[i] = &share.PubShare{}
-		dePubShares[i].I = d.Index
-		err = point.UnmarshalBinary(d.Pub)
+func decodePriShares(suite *bn256.Suite, outputDir string, n int) []*share.PriShare {
+	dePriShares := make([]*share.PriShare, n)
+	for idx := 0; idx < n; idx++ {
+		priKeyFile := filepath.Join(outputDir, fmt.Sprintf("blsPriKey%d.json", idx))
+		priKeyBytes, err := ioutil.ReadFile(priKeyFile)
 		if err != nil {
 			log.Fatal(err)
 		}
-		dePubShares[i].V = point
+		var data keys.PriShare
+		err = json.Unmarshal(priKeyBytes, &data)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		scalar := suite.G2().Scalar()
+		err = scalar.UnmarshalBinary(data.Pri)
+		if err != nil {
+			log.Fatal(err)
+		}
+		dePriShares[idx] = &share.PriShare{}
+		dePriShares[idx].I = data.Index
+		dePriShares[idx].V = scalar
 	}
-	// Recover public key.
-	pubKey, err := share.RecoverPubPoly(suite.G2(), dePubShares, t, n)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return pubKey
+
+	return dePriShares
 }
 
 func TestBLSKeyGen(t *testing.T) {
-	n := 50
-	f := F(n)
+	n := 5
 	q := Q(n)
 	outputDir := generate(n)
 
+	suite := bn256.NewSuite()
+	pubShares := decodePubShares(suite, outputDir, n)
+	priShares := decodePriShares(suite, outputDir, n)
+
+	// Signing
+	msg := []byte("Hello threshold Boneh-Lynn-Shacham")
+	sigsToLeader := make([][]byte, 0)
+	pkToLeader := make([]*share.PubShare, 0)
+	for ridx := 0; ridx < q; ridx++ {
+		sig, err := tbls.Sign(
+			suite, priShares[ridx], msg,
+		)
+		if err != nil {
+			log.Fatal("tbls sign", err)
+		}
+
+		sigsToLeader = append(sigsToLeader, sig)
+		pkToLeader = append(pkToLeader, pubShares[ridx])
+	}
+
+	// Verifying
+	pubKey, err := share.RecoverPubPoly(suite.G2(), pkToLeader, q, n)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	aggSig, err := tbls.Recover(suite, pubKey, msg, sigsToLeader, q, n)
+	if err != nil {
+		t.Error("Failed to recover Aggregated Signature", err)
+	}
+	err = bls.Verify(suite, pubKey.Commit(), msg, aggSig)
+	if err != nil {
+		t.Error("Failed to Verify", err)
+	}
 }

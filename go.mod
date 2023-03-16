@@ -1,4 +1,4 @@
-module main
+module blsgen
 
 go 1.16
 
