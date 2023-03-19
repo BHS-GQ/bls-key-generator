@@ -8,6 +8,7 @@ import (
 	"log"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/share"
@@ -71,9 +72,9 @@ func decodePriShares(suite *bn256.Suite, outputDir string, n int) []*share.PriSh
 }
 
 func TestBLSKeyGen(t *testing.T) {
-	n := 16
+	n := 32
 	q := Q(n)
-	signers := q
+	signers := n
 
 	t.Logf("n=%d, signers=%d\n", n, signers)
 
@@ -87,12 +88,15 @@ func TestBLSKeyGen(t *testing.T) {
 	msg := []byte("Hello threshold Boneh-Lynn-Shacham")
 	sigsToLeader := make([][]byte, 0)
 	pkToLeader := make([]*share.PubShare, 0)
+	total_us := int64(0)
 	for ridx := 0; ridx < signers; ridx++ {
 		pk, sk := pubShares[ridx], priShares[ridx]
-
+		start := time.Now()
 		sig, err := tbls.Sign(
 			suite, sk, msg,
 		)
+		elapsed := time.Since(start)
+		total_us += elapsed.Microseconds()
 		if err != nil {
 			log.Fatal("tbls sign", err)
 		}
@@ -104,8 +108,10 @@ func TestBLSKeyGen(t *testing.T) {
 		sigsToLeader = append(sigsToLeader, sig)
 		pkToLeader = append(pkToLeader, pk)
 	}
+	t.Logf("Sign() took %f us on avg\n", float64(total_us)/float64(signers))
 
-	// Verifying
+	// Combine()
+	start := time.Now()
 	pubKey, err := share.RecoverPubPoly(suite.G2(), pkToLeader, q, n)
 	if err != nil {
 		log.Fatal(err)
@@ -115,8 +121,15 @@ func TestBLSKeyGen(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	elapsed := time.Since(start)
+	t.Logf("Combine() took %d us\n", elapsed.Microseconds())
+
+	// Verification
+	start = time.Now()
 	err = bls.Verify(suite, pubKey.Commit(), msg, aggSig)
 	if err != nil {
 		t.Error(err)
 	}
+	elapsed = time.Since(start)
+	t.Logf("Verify() took %d us\n", elapsed.Microseconds())
 }
