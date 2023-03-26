@@ -1,4 +1,4 @@
-package blsgen
+package main
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"blsgen/keys"
+	"main/keys"
 
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/share"
@@ -71,32 +71,28 @@ func generate(n int) string {
 	}
 
 	// Public Key
-	for idx, x := range pubPoly.Shares(n) {
+	PubShares := make([]keys.PubShare, n)
+	for i, x := range pubPoly.Shares(n) {
 		pubByte, err := x.V.MarshalBinary()
 		if err != nil {
 			log.Println(err)
 		}
-		pubs := keys.PubShare{Index: x.I, Pub: pubByte}
+		pB := keys.PubShare{Index: x.I, Pub: pubByte}
+		PubShares[i] = pB
+	}
 
-		pubBytes, err := json.Marshal(pubs)
-		if err != nil {
-			log.Fatal(err)
-		}
+	pubBytes, err := json.Marshal(PubShares)
+	if err != nil {
+		log.Println(err)
+	}
 
-		pubKeyFile := filepath.Join(
-			outputDir,
-			fmt.Sprintf("blsPubKey%d.json", idx),
-		)
-
-		// Write json array to file.
-		_, err = os.Create(pubKeyFile)
-		if err != nil {
-			log.Println(err)
-		}
-		err = ioutil.WriteFile(pubKeyFile, pubBytes, 0644)
-		if err != nil {
-			log.Println(err)
-		}
+	pubKeyFile := filepath.Join(
+		outputDir,
+		"blsPubKey.json",
+	)
+	err = ioutil.WriteFile(pubKeyFile, pubBytes, 0644)
+	if err != nil {
+		log.Println(err)
 	}
 
 	return outputDir

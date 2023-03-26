@@ -1,4 +1,4 @@
-package blsgen
+package main
 
 func F(n int) int {
 	return (n - 1) / 3

@@ -1,11 +1,11 @@
-package blsgen
+package main
 
 import (
-	"blsgen/keys"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"main/keys"
 	"path/filepath"
 	"testing"
 	"time"
