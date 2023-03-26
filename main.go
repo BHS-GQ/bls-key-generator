@@ -56,7 +56,7 @@ func generate(n int) string {
 
 		privKeyFile := filepath.Join(
 			outputDir,
-			fmt.Sprintf("blsPriKey%d.json", idx),
+			fmt.Sprintf("bls-private-key%d.json", idx),
 		)
 
 		// Write json array to file.
@@ -88,7 +88,7 @@ func generate(n int) string {
 
 	pubKeyFile := filepath.Join(
 		outputDir,
-		"blsPubKey.json",
+		"bls-public-key.json",
 	)
 	err = ioutil.WriteFile(pubKeyFile, pubBytes, 0644)
 	if err != nil {
