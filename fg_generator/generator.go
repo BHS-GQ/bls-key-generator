@@ -74,7 +74,7 @@ func Generate(n int) string {
 	pkGroupBytes := pkGroup.Encode()
 	for idx, pk := range pkShares {
 		pkBytes := pk.Encode()
-		pubs := PubKeys{Index: idx, Share: pkBytes, Group: pkGroupBytes}
+		pubs := PubKey{Index: idx, Share: pkBytes, Group: pkGroupBytes}
 		pubBytes, err := json.Marshal(pubs)
 		if err != nil {
 			log.Fatal(err)

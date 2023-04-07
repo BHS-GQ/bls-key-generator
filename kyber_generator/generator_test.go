@@ -15,7 +15,6 @@ import (
 	"go.dedis.ch/kyber/v3/sign/tbls"
 )
 
-// Decode public shares from pub-key.conf file...
 func decodePubPoly(suite *bn256.Suite, outputDir string, n, t int) *share.PubPoly {
 	pubKeyFile := filepath.Join(outputDir, "bls-public-key.json")
 	// Read public keys from file.

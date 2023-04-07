@@ -5,7 +5,7 @@ type PriShare struct {
 	Pri   []byte `json:"Pri"`
 }
 
-type PubKeys struct {
+type PubKey struct {
 	Index int    `json:"Index"`
 	Share []byte `json:"Share"`
 	Group []byte `json:"Group"`
