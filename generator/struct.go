@@ -1,4 +1,4 @@
-package keys
+package generator
 
 type PriShare struct {
 	Index int    `json:"Index"`
