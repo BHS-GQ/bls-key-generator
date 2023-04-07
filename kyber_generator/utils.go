@@ -1,4 +1,4 @@
-package generator
+package kyber_generator
 
 func F(n int) int {
 	return (n - 1) / 3

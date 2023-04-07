@@ -1,4 +1,4 @@
-package generator
+package kyber_generator
 
 import (
 	"encoding/json"

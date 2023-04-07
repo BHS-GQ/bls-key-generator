@@ -1,4 +1,4 @@
-package generator
+package kyber_generator
 
 type PriShare struct {
 	Index int    `json:"Index"`
