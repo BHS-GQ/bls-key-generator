@@ -8,6 +8,7 @@ import (
 	mrand "math/rand"
 	"path/filepath"
 	"testing"
+	"time"
 
 	fg_crypto "github.com/onflow/flow-go/crypto"
 )
@@ -72,7 +73,7 @@ func decodePriKeys(outputDir string, n int) []fg_crypto.PrivateKey {
 }
 
 func TestBLSKeyGen(t *testing.T) {
-	n := 5
+	n := 32
 	q := Q(n)
 	n_signers := n
 
@@ -98,7 +99,12 @@ func TestBLSKeyGen(t *testing.T) {
 	msg := []byte("random message")
 	signerIds := make([]int, 0, n_signers)
 	signShares := make([]fg_crypto.Signature, 0, n)
+
+	// [SIGN]
+	total := int64(0)
 	for i := 0; i < n_signers; i++ {
+		start := time.Now()
+
 		sidx := signers[i]
 		sk := skShares[sidx]
 		share, err := sk.Sign(msg, kmac)
@@ -106,10 +112,18 @@ func TestBLSKeyGen(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		elapsed := time.Since(start)
+		total += elapsed.Microseconds()
+
 		signShares = append(signShares, share)
 		signerIds = append(signerIds, sidx)
 	}
 
+	avg := float64(total) / float64(n_signers)
+	t.Logf("Avg Sign() is %f us\n", avg)
+
+	// [COMBINE]
+	start := time.Now()
 	for i := 0; i < n_signers; i++ {
 		sidx := signers[i]
 		share := signShares[i]
@@ -122,11 +136,15 @@ func TestBLSKeyGen(t *testing.T) {
 		}
 	}
 
-	// reconstruct and test the threshold signature
 	thresholdSignature, err := fg_crypto.BLSReconstructThresholdSignature(n, q, signShares, signerIds)
 	if err != nil {
 		t.Fatal(err)
 	}
+	elapsed := time.Since(start)
+	t.Logf("Combine() is %d us\n", elapsed.Microseconds())
+
+	// [VERIFY]
+	start = time.Now()
 
 	verif, err := pkGroup.Verify(thresholdSignature, msg, kmac)
 	if err != nil {
@@ -135,4 +153,7 @@ func TestBLSKeyGen(t *testing.T) {
 	if verif != true {
 		t.Fatalf("Threshold signature verification failed")
 	}
+
+	elapsed = time.Since(start)
+	t.Logf("AggSig Verify() is %d us\n", elapsed.Microseconds())
 }
