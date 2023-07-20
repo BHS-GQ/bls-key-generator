@@ -1,6 +1,5 @@
 # BLS Key Generator
-Using `kyber/v3`
-
+Tool for generating `kyber/v3` Threshold BLS keys.
 
 # Instructions
 Takes in the total number of validators `n` as an arg. Sets threshold to quorum size.

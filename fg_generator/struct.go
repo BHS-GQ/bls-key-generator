@@ -1,11 +1,12 @@
-package generator
+package fg_generator
 
 type PriShare struct {
 	Index int    `json:"Index"`
 	Pri   []byte `json:"Pri"`
 }
 
-type PubShare struct {
+type PubKey struct {
 	Index int    `json:"Index"`
-	Pub   []byte `json:"Pub"`
+	Share []byte `json:"Share"`
+	Group []byte `json:"Group"`
 }
