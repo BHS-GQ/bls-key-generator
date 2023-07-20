@@ -53,7 +53,7 @@ func Generate(n int) string {
 
 		privKeyFile := filepath.Join(
 			outputDir,
-			fmt.Sprintf("bls-private-key%d.json", idx),
+			fmt.Sprintf("bls-private-key%d.json", idx+1),
 		)
 
 		// Write json array to file.

@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"main/fg_generator"
+	"main/kyber_generator"
 	"os"
 	"strconv"
 )
@@ -14,5 +14,5 @@ func main() {
 		return
 	}
 
-	fg_generator.Generate(N)
+	kyber_generator.Generate(N)
 }
